@@ -19,37 +19,66 @@ from livekit.agents import (
 from livekit.plugins import openai, silero
 from livekit.plugins import noise_cancellation
 
+from mcp_server import CodexCLIAgent
+
+from git import Repo
+
+import os
+
 logger = logging.getLogger("basic-agent")
 
 load_dotenv()
 
-class MyAgent(Agent):
+class VoiceAssistantAgent(Agent):
     def __init__(self) -> None:
+        self.CodexAgent = CodexCLIAgent()
         super().__init__(
-            instructions="You are a helpful voice assistant for OpenAI Codex. Your interface with users will be Voice\
+            instructions="Your name is Belya. You are a helpful voice assistant for Codex users. Your interface with users will be Voice.\
                 You help users in the following:\
-                1. collecting all the coding tasks they need from Codex to work on.\
+                1. collecting all the coding tasks they need from Codex to work on. Make sure you have all the needed work before sending it to Codex CLI.\
                 2. creating a single prompt for all the coding requests from the user to communicate to Codex.\
-                3. sending the prompt to Codex and getting the code response.\
-                4. reading out the code response to the user via voice; focusing on the task actions done and the list of tests communicated back from Codex. Do not read the diffs.",
+                3. Get the code response, once Codex finish the task.\
+                4. reading out the code response to the user via voice; focusing on the task actions done and the list of tests communicated back from Codex. Do not read the diffs.\
+                Ask the user if they have any more tasks to send to Codex, and repeat the process until the user is done.\
+                review the prompt with the user before sending it to the 'send_task_to_Codex' function. \
+                Always use the `send_task_to_Codex` tool to send any coding task to Codex CLI.\
+                Make sure you start a new branch in the repo before sending any tasks to Codex CLI.\
+                Ask the user if they have a preference for the branch name, and verify the branch name. use the 'create branch' tool.\
+                Never try to do any coding task by yourself. Do not ask the user to provide any code.\
+                Always wait for the Codex response before reading it out to the user.\
+                Be polite and professional. Sound excited to help the user.",
     )
     
     async def on_enter(self):
         # when the agent is added to the session, it'll generate a reply
         # according to its instructions
-        self.session.generate_reply(instructions="greet the user and ask about their day")
+        self.session.generate_reply(instructions="greet the user and introduce yourself as Belya, a voice assistant for Codex users.")
+
+    @function_tool
+    async def create_branch(self, branch_name: str) -> str:
+        """Called when user wants to create a new branch in the repo for Codex to work on.
+        Args:
+            branch_name: The name of the new branch to be created.
+        """
+        repo_path = os.getcwd()  # assuming the current working directory is the repo path
+        repo = Repo(repo_path)
+        # create new branch
+        repo.git.branch(branch_name)
+        logger.info(f"Created and checked out new branch {branch_name} in repo at {repo_path}.")
+        return f"Created and checked out new branch {branch_name} in the repo."
 
     @function_tool
     async def send_task_to_Codex(self, task_prompt: str, run_ctx: RunContext) -> str | None:
-        """Called when user asks to search the web.
+        """Called when user asks to send a task prompt to Codex.
         Args:
-            query: The query to search the web for.
+            task_prompt: The prompt text describing the task to be sent to Codex CLI.
+            run_ctx: The run context for this function call.
         """
-        logger.info(f"Searching the web for {task_prompt}")
+        logger.info(f"Sending the following task prompt to Codex CLI {task_prompt}.")
 
         # wait for the task to finish or the agent speech to be interrupted
         # alternatively, you can disallow interruptions for this function call with
-        # run_ctx.disallow_interruptions()
+        run_ctx.disallow_interruptions()
 
         wait_for_result = asyncio.ensure_future(self._a_long_running_task(task_prompt))
         await run_ctx.speech_handle.wait_if_not_interrupted([wait_for_result])
@@ -66,8 +95,9 @@ class MyAgent(Agent):
 
     async def _a_long_running_task(self, task_prompt: str) -> str:
         """Simulate a long running task."""
-        await asyncio.sleep(5)
-        return f"I got some results for Codex task working on the prompt {task_prompt}."
+        results = await self.CodexAgent.send_task(task_prompt)
+        logger.info(f"Finished long running Codex task for prompt {task_prompt}.")
+        return f"I got some results for Codex task working on the prompt {task_prompt}. Here are the details: {results}"
     
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
@@ -82,9 +112,9 @@ async def entrypoint(ctx: JobContext):
         # turn_detection=MultilingualModel(),
         vad=ctx.proc.userdata["vad"],
         # any combination of STT, LLM, TTS, or realtime API can be used
-        stt=openai.STT(model="whisper-1"),
-        llm=openai.LLM(model="gpt-4o-mini"),
-        tts=openai.TTS(),
+        stt=openai.STT(),
+        llm=openai.LLM(),
+        tts=openai.TTS(instructions="Use a friendly and professional tone of voice. Be cheerful and encouraging. Sound excited to help the user."),
         # allow the LLM to generate a response while waiting for the end of turn
         # See more at https://docs.livekit.io/agents/build/audio/#preemptive-generation
         preemptive_generation=True,
@@ -110,7 +140,7 @@ async def entrypoint(ctx: JobContext):
     ctx.add_shutdown_callback(log_usage)
 
     await session.start(
-        agent=MyAgent(),
+        agent=VoiceAssistantAgent(),
         room=ctx.room,
         room_input_options=RoomInputOptions(
             noise_cancellation=noise_cancellation.BVC(),
@@ -119,4 +149,4 @@ async def entrypoint(ctx: JobContext):
     )
 
 if __name__ == "__main__":
-    cli.run_app(WorkerOptions(load_threshold=1,entrypoint_fnc=entrypoint, prewarm_fnc=prewarm))
+    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm))
