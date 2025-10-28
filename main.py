@@ -46,6 +46,7 @@ class VoiceAssistantAgent(Agent):
         self.available_models: Tuple[str, ...] = ("gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini")
         self.session_settings_cache: Dict[str, Dict[str, Any]] = {}
         self.rate_limit_warning_cache: Dict[str, Dict[str, List[int]]] = {}
+        self.livekit_state: Dict[str, Any] = self._load_livekit_state()
         super().__init__(
             instructions="Your name is Belya. You are a helpful voice assistant for Codex users. Your interface with users will be Voice.\
                 You help users in the following:\
@@ -158,6 +159,54 @@ class VoiceAssistantAgent(Agent):
 
     def _current_session_id(self) -> Optional[str]:
         return getattr(self.CodexAgent.session, "session_id", None)
+
+    def _load_livekit_state(self) -> Dict[str, Any]:
+        try:
+            state = self.session_store.get_livekit_state()
+            if isinstance(state, dict):
+                return state
+        except Exception as error:
+            logger.exception(f"Failed to load stored LiveKit state: {error}")
+        return {}
+
+    def _persist_livekit_state(self) -> None:
+        try:
+            self.session_store.set_livekit_state(self.livekit_state)
+        except Exception as error:
+            logger.exception(f"Failed to persist LiveKit state: {error}")
+
+    def get_livekit_state(self) -> Dict[str, Any]:
+        return dict(self.livekit_state)
+
+    def record_livekit_context(
+        self,
+        room_info: Optional[Dict[str, Any]] = None,
+        participant_info: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        state_changed = False
+
+        if room_info:
+            for key in ("room_id", "room_sid", "room_name"):
+                value = room_info.get(key)
+                if value and self.livekit_state.get(key) != value:
+                    self.livekit_state[key] = value
+                    state_changed = True
+
+        if participant_info:
+            for key in ("participant_id", "participant_sid", "participant_identity"):
+                value = participant_info.get(key)
+                if value and self.livekit_state.get(key) != value:
+                    self.livekit_state[key] = value
+                    state_changed = True
+
+        if state_changed:
+            self.livekit_state["updated_at"] = self._current_time_iso()
+            self._persist_livekit_state()
+            logger.info(
+                "Stored LiveKit context for reuse: room=%s participant=%s",
+                self.livekit_state.get("room_sid") or self.livekit_state.get("room_name"),
+                self.livekit_state.get("participant_sid") or self.livekit_state.get("participant_identity"),
+            )
 
     def _current_time_iso(self) -> str:
         return datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
@@ -1397,14 +1446,60 @@ async def entrypoint(ctx: JobContext):
     # shutdown callbacks are triggered when the session is over
     ctx.add_shutdown_callback(log_usage)
 
-    await session.start(
-        agent=VoiceAssistantAgent(),
-        room=ctx.room,
-        room_input_options=RoomInputOptions(
-            noise_cancellation=noise_cancellation.BVC(),
-        ),
-        room_output_options=RoomOutputOptions(transcription_enabled=True),
+    voice_agent = VoiceAssistantAgent()
+    stored_livekit_state = voice_agent.get_livekit_state()
+
+    stored_room_sid = stored_livekit_state.get("room_sid") or stored_livekit_state.get("room_id")
+    if stored_room_sid:
+        ctx.log_context_fields["stored_room_sid"] = stored_room_sid
+
+    room_input_options = RoomInputOptions(
+        noise_cancellation=noise_cancellation.BVC(),
     )
+    room_output_options = RoomOutputOptions(transcription_enabled=True)
+
+    participant_hint = (
+        stored_livekit_state.get("participant_identity")
+        or stored_livekit_state.get("participant_sid")
+        or stored_livekit_state.get("participant_id")
+    )
+
+    if participant_hint:
+        for attr in ("identity", "participant_identity"):
+            if hasattr(room_input_options, attr):
+                setattr(room_input_options, attr, participant_hint)
+                break
+        for attr in ("identity", "participant_identity"):
+            if hasattr(room_output_options, attr):
+                setattr(room_output_options, attr, participant_hint)
+                break
+
+    try:
+        await session.start(
+            agent=voice_agent,
+            room=ctx.room,
+            room_input_options=room_input_options,
+            room_output_options=room_output_options,
+        )
+    finally:
+        room_obj = getattr(ctx, "room", None)
+        room_info = {
+            "room_id": getattr(room_obj, "sid", None) or getattr(room_obj, "name", None),
+            "room_sid": getattr(room_obj, "sid", None),
+            "room_name": getattr(room_obj, "name", None),
+        }
+
+        agent_participant = getattr(session, "agent_participant", None)
+        if agent_participant is None:
+            agent_participant = getattr(session, "participant", None)
+
+        participant_info = {
+            "participant_id": getattr(agent_participant, "sid", None) or getattr(agent_participant, "identity", None),
+            "participant_sid": getattr(agent_participant, "sid", None),
+            "participant_identity": getattr(agent_participant, "identity", None),
+        }
+
+        voice_agent.record_livekit_context(room_info, participant_info)
 
 if __name__ == "__main__":
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm))
