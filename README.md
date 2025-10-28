@@ -17,7 +17,7 @@ LIVEKIT_URL=https://your-livekit-host
 LIVEKIT_API_KEY=your-api-key
 LIVEKIT_API_SECRET=your-api-secret
 # Optional overrides
-WEB_APP_PORT=3000
+WEB_APP_PORT=4173
 LIVEKIT_TOKEN_TTL=3600
 ```
 
@@ -65,4 +65,4 @@ Update `WEB_APP_PORT` if you need the Python process to proxy the production bun
 
 ## Packaging
 
-The final distributable consists of the Python worker (with its dependencies from `requirements.txt`) and the prebuilt React bundle in `frontend/dist`. Running `python main.py` will automatically start both the LiveKit worker and the static web server so end users can immediately open `http://localhost:3000` (or your configured port) to join the live session.
+The final distributable consists of the Python worker (with its dependencies from `requirements.txt`) and the prebuilt React bundle in `frontend/dist`. Running `python main.py` will automatically start both the LiveKit worker and the static web server so end users can immediately open `http://localhost:4173` (or your configured port) to join the live session.

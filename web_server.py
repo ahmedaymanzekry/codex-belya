@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 _FRONTEND_DIR = Path(__file__).resolve().parent / "frontend"
 _DIST_DIR = _FRONTEND_DIR / "dist"
-_DEFAULT_PORT = 3000
+_DEFAULT_PORT = 4173
 
 _session_store = SessionStore()
 _api_router = APIRouter(prefix="/api")
