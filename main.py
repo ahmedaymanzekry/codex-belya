@@ -19,7 +19,7 @@ from livekit.agents import (
 from livekit.plugins import openai, silero
 from livekit.plugins import noise_cancellation
 
-from mcp_server import CodexCLIAgent
+from mcp_server import CodexCLIAgent, CodexCLISession
 
 from git import Repo
 
@@ -32,6 +32,7 @@ load_dotenv()
 class VoiceAssistantAgent(Agent):
     def __init__(self) -> None:
         self.CodexAgent = CodexCLIAgent()
+        self.sessions_ids_used = []
         super().__init__(
             instructions="Your name is Belya. You are a helpful voice assistant for Codex users. Your interface with users will be Voice.\
                 You help users in the following:\
@@ -40,9 +41,13 @@ class VoiceAssistantAgent(Agent):
                 3. Get the code response, once Codex finish the task.\
                 4. reading out the code response to the user via voice; focusing on the task actions done and the list of tests communicated back from Codex. Do not read the diffs.\
                 Ask the user if they have any more tasks to send to Codex, and repeat the process until the user is done.\
+                After their first task, ask them if they want to continue with the task or start a new one. use the 'start_a_new_session' function if they chose to start a new codex task. \
+                Any new session should have a different id than previous sessions.\
                 review the prompt with the user before sending it to the 'send_task_to_Codex' function. \
                 Always use the `send_task_to_Codex` tool to send any coding task to Codex CLI.\
-                Make sure you start a new branch in the repo before sending any tasks to Codex CLI.\
+                Make sure you notify the user of the current branch before they start a new session/task. use the 'check_current_branch' to get the current branch.\
+                Ask the user if he wants to create a new branch and if the user approve, start a new branch in the repo before sending new tasks to Codex CLI.\
+                Do not change the branch mid-session.\
                 Ask the user if they have a preference for the branch name, and verify the branch name. use the 'create branch' tool.\
                 Never try to do any coding task by yourself. Do not ask the user to provide any code.\
                 Always wait for the Codex response before reading it out to the user.\
@@ -55,6 +60,15 @@ class VoiceAssistantAgent(Agent):
         self.session.generate_reply(instructions="greet the user and introduce yourself as Belya, a voice assistant for Codex users.")
 
     @function_tool
+    async def check_current_branch(self) -> str:
+        """Called when user wants to know the current branch in the repo."""
+        repo_path = os.getcwd()  # assuming the current working directory is the repo path
+        repo = Repo(repo_path)
+        current_branch = repo.active_branch.name
+        logger.info(f"Current branch in repo at {repo_path} is {current_branch}.")
+        return f"Current branch in the repo is {current_branch}."
+    
+    @function_tool
     async def create_branch(self, branch_name: str) -> str:
         """Called when user wants to create a new branch in the repo for Codex to work on.
         Args:
@@ -63,10 +77,24 @@ class VoiceAssistantAgent(Agent):
         repo_path = os.getcwd()  # assuming the current working directory is the repo path
         repo = Repo(repo_path)
         # create new branch
-        repo.git.branch(branch_name)
+        repo.git.checkout("HEAD", b=branch_name)
         logger.info(f"Created and checked out new branch {branch_name} in repo at {repo_path}.")
         return f"Created and checked out new branch {branch_name} in the repo."
 
+    @function_tool
+    async def start_a_new_session(self, session_id: str) -> str:
+        """Called when user wants to start a new Codex task session."""
+        self.sessions_ids_used.append(self.CodexAgent.session.session_id)
+        # reset the Codex agent session with the new session id
+        
+        if session_id in self.sessions_ids_used:
+            logger.info(f"Session id {session_id} has been used before. Asking user for a different session id.")
+            return f"The session id {session_id} has been used before. Please provide a different session id for the new Codex task session."
+        
+        self.CodexAgent.session = CodexCLISession(session_id=session_id)
+        logger.info(f"Started a new Codex agent session.")
+        return "Started a new Codex task session. Please provide the new coding task you want Codex to work on."
+    
     @function_tool
     async def send_task_to_Codex(self, task_prompt: str, run_ctx: RunContext) -> str | None:
         """Called when user asks to send a task prompt to Codex.

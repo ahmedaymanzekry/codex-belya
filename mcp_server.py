@@ -4,10 +4,10 @@ from agents.mcp import MCPServerStdio
 class CodexMCPServer(MCPServerStdio):
     def __init__(self) -> None:
         super().__init__(
-            name="Codex CLI",
+            name="Codex MCP Server",
             params={
                 "command": "npx",
-                "args": ["-y", "codex", "mcp"],
+                "args": ["-y", "codex", "mcp-server"],
                 },
             client_session_timeout_seconds=360000,
         )
@@ -40,6 +40,6 @@ class CodexCLIAgent():
     async def send_task(self, task_prompt: str) -> str:
         """Sends the task prompt to Codex via MCP server and returns the result."""
         async with CodexMCPServer() as mcp_server:
-            self.server_agent.mcp_servers.append(mcp_server)
+            self.server_agent.mcp_servers = [mcp_server]
             result = await Runner.run(self.server_agent, task_prompt, session=self.session)
             return result.final_output
