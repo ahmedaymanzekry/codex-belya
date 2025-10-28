@@ -24,6 +24,7 @@ from livekit.plugins import noise_cancellation
 
 from mcp_server import CodexCLIAgent, CodexCLISession
 from session_store import SessionStore, SessionRecord
+from web_server import ensure_web_app_started
 
 from git import Repo
 
@@ -1408,6 +1409,7 @@ class VoiceAssistantAgent(Agent):
     
 def prewarm(proc: JobProcess):
     proc.userdata["vad"] = silero.VAD.load()
+    ensure_web_app_started()
 
 
 async def entrypoint(ctx: JobContext):
@@ -1502,4 +1504,5 @@ async def entrypoint(ctx: JobContext):
         voice_agent.record_livekit_context(room_info, participant_info)
 
 if __name__ == "__main__":
+    ensure_web_app_started()
     cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm))

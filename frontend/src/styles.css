@@ -1,0 +1,99 @@
+:root {
+  color-scheme: dark light;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b0f19;
+  color: #f8fafc;
+}
+
+body,
+html {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: radial-gradient(circle at top, rgba(59, 130, 246, 0.4), rgba(15, 23, 42, 0.95));
+}
+
+main.status,
+main.room {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  padding: 2.5rem 3rem;
+  max-width: 28rem;
+  text-align: center;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.6);
+}
+
+.card h1 {
+  margin: 0 0 1rem;
+  font-size: 2rem;
+}
+
+.card p {
+  margin: 0;
+  font-size: 1rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.room__header {
+  width: min(72rem, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.55);
+  margin-bottom: 1.5rem;
+}
+
+.room__header h1 {
+  margin: 0 0 0.4rem;
+  font-size: 1.6rem;
+}
+
+.room__header p {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.room__content {
+  width: min(72rem, 100%);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.6);
+}
+
+[data-lk-theme] {
+  --lk-color-bg: rgba(15, 23, 42, 0.8);
+  --lk-color-border: rgba(148, 163, 184, 0.4);
+  --lk-color-text: #f8fafc;
+  --lk-color-accent: #38bdf8;
+  --lk-color-accent-strong: #0ea5e9;
+}
+
+@media (max-width: 768px) {
+  .room__header,
+  .room__content {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 2rem;
+  }
+}
