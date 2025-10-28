@@ -132,6 +132,15 @@ class SessionStore:
                 )
                 """
             )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS livekit_state (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
 
     def ensure_session(self, session_id: str, branch_name: Optional[str]) -> SessionRecord:
         """Create the session record if it does not already exist."""
@@ -394,6 +403,35 @@ class SessionStore:
                 (new_session_id, now, old_session_id),
             )
             return updated.rowcount > 0
+
+    def get_livekit_state(self) -> Dict[str, Any]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT value FROM livekit_state WHERE key = ?",
+                ("voice_assistant",),
+            ).fetchone()
+            if not row:
+                return {}
+            try:
+                state = json.loads(row["value"])
+                if isinstance(state, dict):
+                    return state
+            except json.JSONDecodeError:
+                return {}
+            return {}
+
+    def set_livekit_state(self, state: Dict[str, Any]) -> None:
+        now = _now_iso()
+        payload = json.dumps(state)
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO livekit_state (key, value, updated_at)
+                VALUES (?, ?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+                """,
+                ("voice_assistant", payload, now),
+            )
 
 
 def _deep_update(target: Dict[str, Any], updates: Dict[str, Any]) -> None:
