@@ -7,6 +7,7 @@ interface LiveKitSession {
   room: string;
   url: string;
   token: string;
+  agent_identity?: string;
 }
 
 type FetchState = "loading" | "ready" | "error" | "missing";
@@ -96,7 +97,7 @@ export default function App() {
         <div>
           <h1>Codex Belya Live Session</h1>
           <p>
-            Connected as <strong>{session.identity}</strong> in room <strong>{session.room}</strong>
+            Listening to <strong>{session.agent_identity ?? "Codex Belya"}</strong> as <strong>{session.identity}</strong> in room <strong>{session.room}</strong>
           </p>
         </div>
       </header>

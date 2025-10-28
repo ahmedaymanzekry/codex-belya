@@ -25,6 +25,10 @@ _session_store = SessionStore()
 _api_router = APIRouter(prefix="/api")
 
 
+def _sanitize_identity_component(value: str) -> str:
+    return "".join(char if char.isalnum() or char in {"-", "_"} else "-" for char in value)
+
+
 def _resolve_port() -> int:
     port_env = os.getenv("WEB_APP_PORT")
     if not port_env:
@@ -72,21 +76,32 @@ async def fetch_livekit_session() -> JSONResponse:
     participant_identity = state.get("participant_identity") or state.get("participant_sid")
     room_name = state.get("room_name") or state.get("room_sid") or state.get("room_id")
 
-    if not participant_identity or not room_name:
+    if not room_name:
         raise HTTPException(status_code=404, detail="LiveKit session information is incomplete")
 
     server_url = os.getenv("LIVEKIT_URL")
     if not server_url:
         raise HTTPException(status_code=500, detail="LIVEKIT_URL is not configured")
 
-    token = _build_token(participant_identity, room_name)
+    browser_identity = state.get("browser_identity")
+    if not browser_identity:
+        browser_identity = os.getenv("LIVEKIT_WEB_IDENTITY")
+        if not browser_identity:
+            suffix = str(state.get("room_sid") or state.get("room_name") or "session")
+            browser_identity = f"codex-belya-web-{_sanitize_identity_component(suffix)}"
+        state["browser_identity"] = browser_identity
+        _session_store.set_livekit_state(state)
+
+    token = _build_token(browser_identity, room_name, name=os.getenv("LIVEKIT_WEB_DISPLAY_NAME", browser_identity))
 
     payload = {
-        "identity": participant_identity,
+        "identity": browser_identity,
         "room": room_name,
         "url": server_url,
         "token": token,
     }
+    if participant_identity:
+        payload["agent_identity"] = participant_identity
     return JSONResponse(payload)
 
 

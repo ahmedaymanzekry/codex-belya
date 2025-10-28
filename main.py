@@ -1482,6 +1482,13 @@ async def entrypoint(ctx: JobContext):
     except Exception as error:
         logger.warning("Unable to decode worker token claims: %s", error)
 
+    initial_room_info = {
+        "room_id": getattr(ctx.room, "sid", None) or getattr(ctx.room, "name", None),
+        "room_sid": getattr(ctx.room, "sid", None),
+        "room_name": getattr(ctx.room, "name", None),
+    }
+    voice_agent.record_livekit_context(initial_room_info, None)
+
     if token_claims:
         agent_participant = None
         try:
@@ -1500,7 +1507,7 @@ async def entrypoint(ctx: JobContext):
             "participant_sid": getattr(agent_participant, "sid", None),
             "participant_identity": getattr(token_claims, "identity", None),
         }
-        if preflight_room_info.get("room_name") and preflight_participant_info.get("participant_identity"):
+        if any(preflight_room_info.values()) or any(preflight_participant_info.values()):
             voice_agent.record_livekit_context(preflight_room_info, preflight_participant_info)
 
     try:
