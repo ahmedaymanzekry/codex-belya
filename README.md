@@ -4,10 +4,15 @@ It let's you organize and communicate your thoughts to assign Codex on it, while
 
 ## LiveKit desktop bridge
 
-Run `python gui.py` to launch a small Tkinter-based control panel for the Belya assistant. The window lets you:
+Run `python gui.py` to launch a small Tkinter-based control panel for the Belya assistant. The window now pulls its connection
+details from environment variables (or a `.env` file) and connects automatically when everything is configured:
 
-* enter a LiveKit URL and access token,
-* connect or disconnect from the room,
-* and stream microphone audio into the room once connected.
+* `LIVEKIT_URL` – the websocket URL of your deployment.
+* `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET` – used to mint short-lived participant tokens.
+* `LIVEKIT_ROOM` – optional; if omitted the GUI falls back to the last room stored in `session_store`.
+* `LIVEKIT_PARTICIPANT_ID` – optional custom identity; a random value is generated when missing.
 
-The GUI also surfaces the last room and participant identity stored in `session_store` so you can reconnect quickly. It requires the `livekit-agents`, `numpy`, and `sounddevice` packages for full functionality.
+With these values in place the GUI mints a JWT on startup, connects to the room, and enables microphone streaming without
+requiring any manual input. You can still click **Connect** to retry after a disconnect, and the window surfaces the last
+room/participant metadata stored in `session_store`. Install the `livekit-agents`, `numpy`, and `sounddevice` packages for full
+functionality.

@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
 import threading
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Dict, Optional
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
 
 import tkinter as tk
 from tkinter import ttk
@@ -29,6 +31,11 @@ except ImportError as exc:  # pragma: no cover - LiveKit SDK not installed
     raise RuntimeError(
         "The LiveKit Python SDK is required to use the GUI. Install `livekit-agents`."
     ) from exc
+
+try:  # pragma: no cover - optional convenience dependency
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - python-dotenv not installed
+    load_dotenv = None  # type: ignore
 
 from session_store import SessionStore
 
@@ -202,15 +209,22 @@ class LiveKitGUI:
 
         self._mic_stream: Optional[sd.InputStream] = None  # type: ignore[assignment]
         self._audio_supported = sd is not None and np is not None
+        self._auto_credentials: Optional[Tuple[str, str]] = None
+        self._auto_room: Optional[str] = None
+        self._auto_identity: Optional[str] = None
 
         self._build_layout()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        self._load_env_configuration()
 
         if not self._audio_supported:
             self._append_log(
                 "sounddevice or numpy is not available. Install the optional dependencies to stream audio."
             )
             self.start_button.configure(state=tk.DISABLED)
+
+        self.root.after(200, self._auto_connect_if_configured)
 
     # ------------------------------------------------------------------
     # Tkinter layout helpers
@@ -224,12 +238,12 @@ class LiveKitGUI:
         container.columnconfigure(1, weight=1)
 
         ttk.Label(container, text="LiveKit URL:").grid(row=0, column=0, sticky="w")
-        url_entry = ttk.Entry(container, textvariable=self.url_var)
-        url_entry.grid(row=0, column=1, columnspan=3, sticky="ew", padx=(8, 0))
+        self.url_entry = ttk.Entry(container, textvariable=self.url_var)
+        self.url_entry.grid(row=0, column=1, columnspan=3, sticky="ew", padx=(8, 0))
 
         ttk.Label(container, text="Access Token:").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        token_entry = ttk.Entry(container, textvariable=self.token_var, show="*")
-        token_entry.grid(row=1, column=1, columnspan=3, sticky="ew", padx=(8, 0), pady=(8, 0))
+        self.token_entry = ttk.Entry(container, textvariable=self.token_var, show="*")
+        self.token_entry.grid(row=1, column=1, columnspan=3, sticky="ew", padx=(8, 0), pady=(8, 0))
 
         self.connect_button = ttk.Button(
             container, text="Connect", command=self._on_connect_clicked
@@ -340,20 +354,24 @@ class LiveKitGUI:
     # ------------------------------------------------------------------
     def _on_connect_clicked(self) -> None:
         url = self.url_var.get().strip()
-        token = self.token_var.get().strip()
-        if not url or not token:
-            self._append_log("Provide both the LiveKit URL and an access token.")
+        if not url:
+            self._append_log("LiveKit URL is required.")
             return
 
-        self.status_var.set("Connecting…")
-        self._append_log("Connecting to LiveKit room…")
-        self.connect_button.configure(state=tk.DISABLED)
+        if self._auto_credentials and self._auto_room:
+            token = self._mint_access_token(self._auto_room, self._resolve_identity())
+            self.token_var.set("Auto-generated token")
+            self._initiate_connection(url, token)
+            return
 
-        self._schedule_async(
-            self.client.connect(url, token),
-            on_success=self._on_connected,
-            on_error=self._on_connect_error,
-        )
+        token = self.token_var.get().strip()
+        if not token:
+            self._append_log(
+                "Provide an access token or configure LiveKit credentials in the environment."
+            )
+            return
+
+        self._initiate_connection(url, token)
 
     def _on_connected(self, _result: Any) -> None:
         self._append_log("Connected to LiveKit. Microphone streaming is available.")
@@ -453,6 +471,88 @@ class LiveKitGUI:
         context = self.state_manager.load()
         self.context_var.set(self._format_context(context))
         self._append_log("Loaded stored LiveKit context.")
+
+    def _load_env_configuration(self) -> None:
+        if load_dotenv:
+            load_dotenv()
+
+        url = os.getenv("LIVEKIT_URL", "").strip()
+        api_key = os.getenv("LIVEKIT_API_KEY", "").strip()
+        api_secret = os.getenv("LIVEKIT_API_SECRET", "").strip()
+        room = os.getenv("LIVEKIT_ROOM", "").strip()
+        identity = os.getenv("LIVEKIT_PARTICIPANT_ID", "").strip()
+
+        if url:
+            self.url_var.set(url)
+            self.url_entry.configure(state="readonly")
+
+        if api_key and api_secret:
+            self._auto_credentials = (api_key, api_secret)
+            self.token_var.set("Auto-generated token")
+
+        if room:
+            self._auto_room = room
+
+        if identity:
+            self._auto_identity = identity
+
+        if not self._auto_room:
+            stored_room = self.state_manager.load().room_name
+            if stored_room:
+                self._auto_room = stored_room
+
+    def _auto_connect_if_configured(self) -> None:
+        if not self._auto_credentials:
+            if not self.token_var.get():
+                self._append_log(
+                    "Set LIVEKIT_API_KEY and LIVEKIT_API_SECRET to auto-generate access tokens."
+                )
+            return
+
+        url = self.url_var.get().strip()
+        if not url:
+            self._append_log("Set LIVEKIT_URL to enable automatic connection.")
+            return
+
+        if not self._auto_room:
+            self._append_log(
+                "Specify LIVEKIT_ROOM or connect once manually so the room name is stored."
+            )
+            return
+
+        token = self._mint_access_token(self._auto_room, self._resolve_identity())
+        self.token_var.set("Auto-generated token")
+        self._initiate_connection(url, token)
+
+    def _initiate_connection(self, url: str, token: str) -> None:
+        self.status_var.set("Connecting…")
+        self._append_log("Connecting to LiveKit room…")
+        self.connect_button.configure(state=tk.DISABLED)
+
+        self._schedule_async(
+            self.client.connect(url, token),
+            on_success=self._on_connected,
+            on_error=self._on_connect_error,
+        )
+
+    def _mint_access_token(self, room: str, identity: str) -> str:
+        if not self._auto_credentials:
+            raise RuntimeError("LiveKit credentials are not configured")
+        api_key, api_secret = self._auto_credentials
+        token = rtc.AccessToken(api_key, api_secret, identity=identity)
+        token.add_grant(rtc.VideoGrant(room=room))
+        return token.to_jwt(ttl=3600)
+
+    def _resolve_identity(self) -> str:
+        if self._auto_identity:
+            return self._auto_identity
+        stored_identity = self.state_manager.load().participant_identity
+        if stored_identity:
+            self._auto_identity = stored_identity
+            return stored_identity
+        identity = f"belya-gui-{uuid.uuid4().hex[:8]}"
+        self._auto_identity = identity
+        return identity
 
     # ------------------------------------------------------------------
     # Utility methods
