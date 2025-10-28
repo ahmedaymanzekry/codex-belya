@@ -54,6 +54,10 @@ class VoiceAssistantAgent(Agent):
                 Be polite and professional. Sound excited to help the user.",
     )
     
+    def _handle_tool_error(self, action: str, error: Exception) -> str:
+        logger.exception(f"Error while {action}: {error}")
+        return f"I ran into an error while {action}: {error}"
+    
     async def on_enter(self):
         # when the agent is added to the session, it'll generate a reply
         # according to its instructions
@@ -62,11 +66,14 @@ class VoiceAssistantAgent(Agent):
     @function_tool
     async def check_current_branch(self) -> str:
         """Called when user wants to know the current branch in the repo."""
-        repo_path = os.getcwd()  # assuming the current working directory is the repo path
-        repo = Repo(repo_path)
-        current_branch = repo.active_branch.name
-        logger.info(f"Current branch in repo at {repo_path} is {current_branch}.")
-        return f"Current branch in the repo is {current_branch}."
+        try:
+            repo_path = os.getcwd()  # assuming the current working directory is the repo path
+            repo = Repo(repo_path)
+            current_branch = repo.active_branch.name
+            logger.info(f"Current branch in repo at {repo_path} is {current_branch}.")
+            return f"Current branch in the repo is {current_branch}."
+        except Exception as error:
+            return self._handle_tool_error("checking the current branch", error)
     
     @function_tool
     async def create_branch(self, branch_name: str) -> str:
@@ -74,26 +81,229 @@ class VoiceAssistantAgent(Agent):
         Args:
             branch_name: The name of the new branch to be created.
         """
-        repo_path = os.getcwd()  # assuming the current working directory is the repo path
-        repo = Repo(repo_path)
-        # create new branch
-        repo.git.checkout("HEAD", b=branch_name)
-        logger.info(f"Created and checked out new branch {branch_name} in repo at {repo_path}.")
-        return f"Created and checked out new branch {branch_name} in the repo."
+        try:
+            repo_path = os.getcwd()  # assuming the current working directory is the repo path
+            repo = Repo(repo_path)
+            if branch_name in [head.name for head in repo.heads]:
+                logger.info(f"Branch {branch_name} already exists in repo at {repo_path}.")
+                return f"The branch {branch_name} already exists. Please pick a different name or switch to it."
+            # create new branch
+            repo.git.checkout("HEAD", b=branch_name)
+            logger.info(f"Created and checked out new branch {branch_name} in repo at {repo_path}.")
+            return f"Created and checked out new branch {branch_name} in the repo."
+        except Exception as error:
+            return self._handle_tool_error("creating a new branch", error)
+
+    @function_tool
+    async def commit_changes(self, commit_message: str) -> str:
+        """Called when user wants to commit all current changes with a message.
+        Args:
+            commit_message: The commit message to use.
+        """
+        try:
+            repo_path = os.getcwd()
+            repo = Repo(repo_path)
+            if not repo.is_dirty(untracked_files=True):
+                logger.info(f"No changes to commit in repo at {repo_path}.")
+                return "There are no changes to commit."
+
+            repo.git.add(all=True)
+            commit = repo.index.commit(commit_message)
+            logger.info(
+                f"Committed changes in repo at {repo_path} with message '{commit_message}'. Commit id: {commit.hexsha}."
+            )
+            return f"Committed changes with message: {commit_message}."
+        except Exception as error:
+            return self._handle_tool_error("committing changes", error)
+
+    @function_tool
+    async def pull_updates(self, remote_name: str = "origin", branch_name: str | None = None) -> str:
+        """Called when user wants to pull the latest updates from the remote branch.
+        Args:
+            remote_name: The name of the remote to pull from. Defaults to 'origin'.
+            branch_name: The name of the branch to pull. Defaults to the current branch.
+        """
+        try:
+            repo_path = os.getcwd()
+            repo = Repo(repo_path)
+            active_branch = repo.active_branch.name
+            branch_to_pull = branch_name or active_branch
+            remote = repo.remote(remote_name)
+            pull_infos = remote.pull(branch_to_pull)
+            summaries = ", ".join(
+                info.summary for info in pull_infos if hasattr(info, "summary") and info.summary
+            )
+            logger.info(
+                f"Pulled updates from {remote_name}/{branch_to_pull} in repo at {repo_path}. Summaries: {summaries}"
+            )
+            if not summaries:
+                summaries = "Pull completed with no additional details."
+            return f"Pulled latest updates from {remote_name}/{branch_to_pull}. {summaries}"
+        except Exception as error:
+            return self._handle_tool_error("pulling updates", error)
+
+    @function_tool
+    async def fetch_updates(self, remote_name: str = "origin") -> str:
+        """Called when user wants to fetch updates from the remote without merging."""
+        try:
+            repo_path = os.getcwd()
+            repo = Repo(repo_path)
+            remote = repo.remote(remote_name)
+            fetch_infos = remote.fetch()
+            summaries = ", ".join(
+                info.summary for info in fetch_infos if hasattr(info, "summary") and info.summary
+            )
+            logger.info(
+                f"Fetched updates from {remote_name} in repo at {repo_path}. Summaries: {summaries}"
+            )
+            if not summaries:
+                summaries = "Fetch completed with no additional details."
+            return f"Fetched updates from {remote_name}. {summaries}"
+        except Exception as error:
+            return self._handle_tool_error("fetching updates", error)
+
+    @function_tool
+    async def list_branches(self) -> str:
+        """Called when user wants to list all local branches."""
+        try:
+            repo_path = os.getcwd()
+            repo = Repo(repo_path)
+            branches = [head.name for head in repo.heads]
+            current_branch = repo.active_branch.name
+
+            if not branches:
+                logger.info(f"No branches found in repo at {repo_path}.")
+                return "No branches found in the repository."
+
+            formatted_branches = [
+                f"{name} (current)" if name == current_branch else name for name in branches
+            ]
+            branch_list = ", ".join(formatted_branches)
+            logger.info(f"Listed branches in repo at {repo_path}: {branch_list}")
+            return f"The local branches are: {branch_list}."
+        except Exception as error:
+            return self._handle_tool_error("listing branches", error)
+
+    @function_tool
+    async def delete_branch(self, branch_name: str, force: bool = False) -> str:
+        """Called when user wants to delete a local branch.
+        Args:
+            branch_name: The name of the branch to delete.
+            force: Whether to force delete the branch even if it is not fully merged.
+        """
+        try:
+            repo_path = os.getcwd()
+            repo = Repo(repo_path)
+            current_branch = repo.active_branch.name
+            if branch_name == current_branch:
+                logger.info(
+                    f"Attempted to delete current branch {branch_name} in repo at {repo_path}."
+                )
+                return "Cannot delete the branch you are currently on. Please switch to another branch first."
+
+            if branch_name not in [head.name for head in repo.heads]:
+                logger.info(f"Attempted to delete non-existent branch {branch_name} in repo at {repo_path}.")
+                return f"The branch {branch_name} does not exist."
+
+            flag = "-D" if force else "-d"
+            repo.git.branch(flag, branch_name)
+            logger.info(
+                f"Deleted branch {branch_name} in repo at {repo_path} with force={force}."
+            )
+            return f"Deleted branch {branch_name}."
+        except Exception as error:
+            return self._handle_tool_error("deleting the branch", error)
+
+    @function_tool
+    async def push_branch(
+        self, remote_name: str = "origin", branch_name: str | None = None, set_upstream: bool | None = None
+    ) -> str:
+        """Called when user wants to push the current or specified branch to a remote.
+        Args:
+            remote_name: The remote to push to. Defaults to 'origin'.
+            branch_name: The branch to push. Defaults to the current branch.
+            set_upstream: Force setting upstream; if None it is auto-detected.
+        """
+        try:
+            repo_path = os.getcwd()
+            repo = Repo(repo_path)
+            remote = repo.remote(remote_name)
+
+            active_branch = repo.active_branch
+            branch_to_push = branch_name or active_branch.name
+
+            if branch_to_push not in [head.name for head in repo.heads]:
+                logger.info(
+                    f"Attempted to push non-existent branch {branch_to_push} in repo at {repo_path}."
+                )
+                return f"The branch {branch_to_push} does not exist locally."
+
+            head_ref = next(head for head in repo.heads if head.name == branch_to_push)
+            tracking_branch = head_ref.tracking_branch()
+
+            should_set_upstream = set_upstream if set_upstream is not None else tracking_branch is None
+
+            if should_set_upstream:
+                push_result = remote.push(f"{branch_to_push}:{branch_to_push}", set_upstream=True)
+            else:
+                push_result = remote.push(branch_to_push)
+
+            summaries = ", ".join(
+                info.summary for info in push_result if hasattr(info, "summary") and info.summary
+            )
+            logger.info(
+                f"Pushed branch {branch_to_push} to {remote_name} from repo at {repo_path}. "
+                f"Set upstream: {should_set_upstream}. Summaries: {summaries}"
+            )
+            if not summaries:
+                summaries = "Push completed with no additional details."
+
+            upstream_msg = (
+                "Upstream branch configured."
+                if should_set_upstream
+                else "Used existing upstream."
+            )
+            return f"Pushed {branch_to_push} to {remote_name}. {upstream_msg} {summaries}"
+        except Exception as error:
+            return self._handle_tool_error("pushing the branch", error)
+
+    @function_tool
+    async def switch_branch(self, branch_name: str) -> str:
+        """Called when user wants to switch to an existing branch.
+        Args:
+            branch_name: The name of the branch to switch to.
+        """
+        try:
+            repo_path = os.getcwd()
+            repo = Repo(repo_path)
+            if branch_name not in [head.name for head in repo.heads]:
+                logger.info(
+                    f"Attempted to switch to non-existent branch {branch_name} in repo at {repo_path}."
+                )
+                return f"The branch {branch_name} does not exist."
+
+            repo.git.checkout(branch_name)
+            logger.info(f"Switched to branch {branch_name} in repo at {repo_path}.")
+            return f"Switched to branch {branch_name}."
+        except Exception as error:
+            return self._handle_tool_error("switching branches", error)
 
     @function_tool
     async def start_a_new_session(self, session_id: str) -> str:
         """Called when user wants to start a new Codex task session."""
-        self.sessions_ids_used.append(self.CodexAgent.session.session_id)
-        # reset the Codex agent session with the new session id
-        
-        if session_id in self.sessions_ids_used:
-            logger.info(f"Session id {session_id} has been used before. Asking user for a different session id.")
-            return f"The session id {session_id} has been used before. Please provide a different session id for the new Codex task session."
-        
-        self.CodexAgent.session = CodexCLISession(session_id=session_id)
-        logger.info(f"Started a new Codex agent session.")
-        return "Started a new Codex task session. Please provide the new coding task you want Codex to work on."
+        try:
+            self.sessions_ids_used.append(self.CodexAgent.session.session_id)
+            # reset the Codex agent session with the new session id
+            
+            if session_id in self.sessions_ids_used:
+                logger.info(f"Session id {session_id} has been used before. Asking user for a different session id.")
+                return f"The session id {session_id} has been used before. Please provide a different session id for the new Codex task session."
+            
+            self.CodexAgent.session = CodexCLISession(session_id=session_id)
+            logger.info(f"Started a new Codex agent session.")
+            return "Started a new Codex task session. Please provide the new coding task you want Codex to work on."
+        except Exception as error:
+            return self._handle_tool_error("starting a new Codex session", error)
     
     @function_tool
     async def send_task_to_Codex(self, task_prompt: str, run_ctx: RunContext) -> str | None:
@@ -102,24 +312,31 @@ class VoiceAssistantAgent(Agent):
             task_prompt: The prompt text describing the task to be sent to Codex CLI.
             run_ctx: The run context for this function call.
         """
-        logger.info(f"Sending the following task prompt to Codex CLI {task_prompt}.")
+        try:
+            logger.info(f"Sending the following task prompt to Codex CLI {task_prompt}.")
 
-        # wait for the task to finish or the agent speech to be interrupted
-        # alternatively, you can disallow interruptions for this function call with
-        run_ctx.disallow_interruptions()
+            # wait for the task to finish or the agent speech to be interrupted
+            # alternatively, you can disallow interruptions for this function call with
+            run_ctx.disallow_interruptions()
 
-        wait_for_result = asyncio.ensure_future(self._a_long_running_task(task_prompt))
-        await run_ctx.speech_handle.wait_if_not_interrupted([wait_for_result])
+            wait_for_result = asyncio.ensure_future(self._a_long_running_task(task_prompt))
+            try:
+                await run_ctx.speech_handle.wait_if_not_interrupted([wait_for_result])
+            except Exception:
+                wait_for_result.cancel()
+                raise
 
-        if run_ctx.speech_handle.interrupted:
-            logger.info(f"Interrupted receiving reply from Codex task with prompt {task_prompt}")
-            # return None to skip the tool reply
-            wait_for_result.cancel()
-            return None
+            if run_ctx.speech_handle.interrupted:
+                logger.info(f"Interrupted receiving reply from Codex task with prompt {task_prompt}")
+                # return None to skip the tool reply
+                wait_for_result.cancel()
+                return None
 
-        output = wait_for_result.result()
-        logger.info(f"Done receiving Codex reply for the task with prompt {task_prompt}, result: {output}")
-        return output
+            output = wait_for_result.result()
+            logger.info(f"Done receiving Codex reply for the task with prompt {task_prompt}, result: {output}")
+            return output
+        except Exception as error:
+            return self._handle_tool_error("sending the task to Codex", error)
 
     async def _a_long_running_task(self, task_prompt: str) -> str:
         """Simulate a long running task."""
