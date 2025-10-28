@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import math
+import threading
 from datetime import datetime
 import json
 from dotenv import load_dotenv
@@ -34,6 +35,20 @@ from typing import Any, Dict, List, Optional, Tuple
 logger = logging.getLogger("basic-agent")
 
 load_dotenv()
+
+
+def _livekit_credentials_available() -> bool:
+    """Return True when the required LiveKit environment variables exist."""
+
+    required = ("LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_URL")
+    missing = [name for name in required if not os.getenv(name)]
+    if missing:
+        logger.warning(
+            "Missing LiveKit configuration values: %s. The voice worker will not start.",
+            ", ".join(missing),
+        )
+        return False
+    return True
 
 class VoiceAssistantAgent(Agent):
     def __init__(self) -> None:
@@ -1539,4 +1554,11 @@ async def entrypoint(ctx: JobContext):
 
 if __name__ == "__main__":
     ensure_web_app_started()
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm))
+    if _livekit_credentials_available():
+        cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint, prewarm_fnc=prewarm))
+    else:
+        logger.info("LiveKit worker disabled. Serving the REST API only.")
+        try:
+            threading.Event().wait()
+        except KeyboardInterrupt:
+            logger.info("Shutting down Codex Belya.")
