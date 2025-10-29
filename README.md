@@ -1,5 +1,5 @@
 <a>
-  <img src="./Codex Belya logo.png" alt="Codex Belya logo" width="100" height="100">
+  <img src="./Codex Belya logo.png" alt="Codex Belya logo" width="200" height="200">
 </a>
 
 # Codex Belya
