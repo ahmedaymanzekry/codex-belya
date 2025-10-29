@@ -1,6 +1,6 @@
-<a>
-  <img src="./Codex Belya logo.png" alt="Codex Belya logo" width="200" height="200">
-</a>
+<p align="center">
+  <img src="./Codex Belya logo.png" alt="Codex Belya logo" width="300" height="300">
+</p>
 
 Codex Belya is the first "Voice Coding" agent made for professionals (Think of it like Iron Man's Jarvis from 2008). Belya is a voice agentic AI companion for the Codex CLI. Belya is mainly made for developers to enhance their experience of using Codex CLI or IDE extension.
 The name is inspired by the Egyptian slang term for the shop-floor assistant “belya” who keeps the mechanic's garage organized and flowing. Likewise, Belya, the voice assistant agent, keeps your coding workflow light, interactive, and on track.
@@ -29,7 +29,7 @@ So, you basically talk to your code (as we all do anyways when we are in the zon
 | LiveKit API key and project | The free tier is sufficient for experimentation, development, testing and loads of work. |
 | OpenAI Platform account and API key | Access to Tier 1 (or higher) is required for API usage. Rate limits are tier-dependant. |
 
-### Quick setup
+### Prerequisite setup
 
 ```bash
 # Python environment
@@ -116,17 +116,17 @@ pip install -r requirements.txt
 ## Running the Voice Assistant
 
 1. Ensure `.env` is populated as described above and your Python environment is active.
-2. Start the worker inside your project's repository (can be done through your editor's terminal):
+2. Start Belya inside your project's repository (can be done through your editor's terminal):
    ```bash
-   cd <path/to/your/project>
+   cd <path/to/your/current/project>
    python3 <path-to-belya-cloned-repository>/main.py start
    ```
-3. Open [https://agents-playground.livekit.io/](https://agents-playground.livekit.io/):
+3. Open [LiveKit Agents Playground](https://agents-playground.livekit.io/):
    - Create an account and start a project if you haven't already.
    - Join the room that matches the session (defaults to what the worker creates when you press 'connect').
    - Begin speaking with Belya.
    - Belya will:
-     - Confirm the current git branch and ask it to create/switch branches.
+     - Confirm the current git branch and ask if you want it to create/switch branches.
      - Aggregate coding tasks and dispatch them to Codex.
      - Read back Codex action and testing summaries and prompt for next steps.
      - Manage session history, Codex utilization, and compress Codex context.
@@ -165,11 +165,11 @@ Behind the scenes, Belya queues your instructions, issues the Codex prompt, trac
 
 ## Acknowledgements
 
-- Huge thanks to Cole Medin for the [LiveKit voice assistant tutorial](https://www.youtube.com/watch?v=TXVyxJdlzQs), which provided a solid starting point for me to create the Voice Assistant agent.
+- Huge thanks to Tim from "Tech with Tim" channel for the [LiveKit voice assistant tutorial](https://www.youtube.com/watch?v=DNWLIAK4BUY). He provided me with a starting point to create the Voice Assistant agent.
 
 ---
 
 ## TODO
 
-- Add a local frontend for quick microphone control and transcript review (will require local livekit server, but the cloud-hosted playground is working fine for me).
+- Add a local frontend (will require local livekit server, but the cloud-hosted playground is working fine for now).
 - Add RAG-enabled knowledge grounding using LangChain (project docs, codebase, etc.).
