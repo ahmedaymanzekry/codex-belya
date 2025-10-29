@@ -2,8 +2,6 @@
   <img src="./Codex Belya logo.png" alt="Codex Belya logo" width="200" height="200">
 </a>
 
-# Codex Belya
-
 Codex Belya is the first "Voice Coding" agent made for professionals (Think of it like Iron Man's Jarvis from 2008). Belya is a voice agentic AI companion for the Codex CLI. Belya is mainly made for developers to enhance their experience of using Codex CLI or IDE extension.
 The name is inspired by the Egyptian slang term for the shop-floor assistant “belya” who keeps the mechanic's garage organized and flowing. Likewise, Belya, the voice assistant agent, keeps your coding workflow light, interactive, and on track.
 So, you basically talk to your code (as we all do anyways when we are in the zone :D ), Belya then coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
