@@ -196,3 +196,10 @@ Behind the scenes, Belya queues your instructions, issues the Codex prompt, trac
 
 - Add a local frontend (will require local livekit server, but the cloud-hosted playground is working fine for now).
 - Add RAG-enabled knowledge grounding using LangChain (project docs, codebase, etc.).
+---
+
+## License
+
+Copyright 2025 Ahmed Zekry
+
+Licensed under the MIT License.
