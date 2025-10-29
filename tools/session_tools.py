@@ -7,12 +7,13 @@ from git import Repo
 from livekit.agents import function_tool
 
 from mcp_server import CodexCLISession
+from .metrics_tools import SessionMetricsMixin
 
 
 logger = logging.getLogger(__name__)
 
 
-class SessionManagementToolsMixin:
+class SessionManagementToolsMixin(SessionMetricsMixin):
     """Mixin that exposes session management function tools."""
 
     @function_tool
