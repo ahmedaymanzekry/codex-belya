@@ -1,6 +1,8 @@
 # Codex Belya
 
-Codex Belya is a voice agentic AI companion for the Codex CLI (Think of it like Iron Man's Jarvis). Inspired by the Egyptian term for the shop-floor assistant “belya” who keeps the mechanic's garage humming, this agent keeps your coding workflow light, interactive, and on track: you talk to your code (as we all do anyways when we are in the zone :D ), Belya coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
+Codex Belya is the first "Voice Coding" agent made for professionals (Think of it like Iron Man's Jarvis from 2008). Belya is a voice agentic AI companion for the Codex CLI. Belya is mainly made for developers to enhance their experience of using Codex CLI or IDE extension.
+The name is inspired by the Egyptian slang term for the shop-floor assistant “belya” who keeps the mechanic's garage organized and flowing. Likewise, Belya, the voice assistant agent, keeps your coding workflow light, interactive, and on track.
+So, you basically talk to your code (as we all do anyways when we are in the zone :D ), Belya then coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
 
 ---
 
@@ -22,8 +24,8 @@ Codex Belya is a voice agentic AI companion for the Codex CLI (Think of it like 
 | Python 3.10+ | Tested with 3.10 and 3.11. |
 | Node.js 18+ (includes `npx`) | Required to launch the Codex MCP server via `npx codex`. |
 | Codex CLI | Install globally with `npm install -g @openai/codex`. |
-| LiveKit project | The free tier is sufficient for experimentation, development and testing. |
-| OpenAI Platform account | Access to Tier 1 (or higher) is required for API usage. |
+| LiveKit API key and project | The free tier is sufficient for experimentation, development, testing and loads of work. |
+| OpenAI Platform account and API key | Access to Tier 1 (or higher) is required for API usage. Rate limits are tier-dependant. |
 
 ### Quick setup
 
@@ -93,6 +95,7 @@ pip install -r requirements.txt
    python3 -m venv .venv
    source .venv/bin/activate
    ```
+   You can also use your project's environment, but don't forget to install the requirements.
 3. **Install Python requirements**
    ```bash
    pip install -r requirements.txt
@@ -110,31 +113,33 @@ pip install -r requirements.txt
 
 ## Running the Voice Assistant
 
-1. Ensure `.env` is populated and your Python environment is active.
-2. Start the worker inside your project's repository:
+1. Ensure `.env` is populated as described above and your Python environment is active.
+2. Start the worker inside your project's repository (can be done through your editor's terminal):
    ```bash
    cd <path/to/your/project>
    python3 <path-to-belya-cloned-repository>/main.py start
    ```
 3. Open [https://agents-playground.livekit.io/](https://agents-playground.livekit.io/):
-   - Populate your .env with your LiveKit project URL, API key, and secret.
-   - Join the room that matches the session (defaults to what the worker creates).
-   - Begin speaking with Belya. It will:
+   - Create an account and start a project if you haven't already.
+   - Join the room that matches the session (defaults to what the worker creates when you press 'connect').
+   - Begin speaking with Belya.
+   - Belya will:
      - Confirm the current git branch and ask it to create/switch branches.
      - Aggregate coding tasks and dispatch them to Codex.
-     - Read back action summaries and prompt for next steps.
+     - Read back Codex action and testing summaries and prompt for next steps.
      - Manage session history, Codex utilization, and compress Codex context.
-
+4. Open your code editor and watch the magic happen (see your Codex code edits and reviews brought to life!).
+5. Sit back! Relax! and start professional "Voice Coding".
 ---
 
 ## Feature Matrix
 
 | Capability | Details |
 | --- | --- |
-| Session orchestration | Start new Codex sessions, list historical sessions, switch between them, rename sessions, and compact context. |
+| Session orchestration | Start new Codex sessions, list previous sessions, switch between them, rename sessions, and compact session context for an optimized Codex utilization. |
 | Persistent context | Store branch metadata, utilization metrics, and LiveKit room/participant IDs in SQLite. |
 | Git automation | Full local control: check current branch, create/delete/switch branches, commit, fetch, pull, push; all via voice commands. |
-| Token analytics | Track total tokens, last-task tokens, 5-hour & weekly usage; warn when thresholds are exceeded (you need to provide your user rate limits). |
+| Token analytics | Track total tokens, last-task tokens, 5-hour & weekly usage; warn when thresholds are exceeded (you need to tell Belya your user rate limits). |
 | Codex configuration | Adjust approval policy and model on demand; defaults to risk-free “never” policy until the user requests changes. |
 | Error resilience | Every function tool routes failures back to the voice assistant with user-friendly explanations for the error. |
 
