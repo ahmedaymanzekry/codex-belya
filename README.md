@@ -1,6 +1,6 @@
 # Codex Belya
 
-Codex Belya is a voice agentic AI companion for the Codex CLI. Inspired by the Egyptian term for the shop-floor assistant “belya” who keeps the garage humming, this agent keeps your coding workflow on track: you speak the tasks aloud (as we all do anyways when we are in the zone :D ), it coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
+Codex Belya is a voice agentic AI companion for the Codex CLI (Think of it like Iron Man's Jarvis). Inspired by the Egyptian term for the shop-floor assistant “belya” who keeps the garage humming, this agent keeps your coding workflow on track: you speak the tasks aloud (as we all do anyways when we are in the zone :D ), it coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
 
 ---
 
@@ -111,9 +111,10 @@ pip install -r requirements.txt
 ## Running the Voice Assistant
 
 1. Ensure `.env` is populated and your Python environment is active.
-2. Start the worker:
+2. Start the worker inside your project's repository:
    ```bash
-   python3 <path-to-cloned-repository>/main.py start
+   cd <path/to/your/project>
+   python3 <path-to-belya-cloned-repository>/main.py start
    ```
 3. Open [https://agents-playground.livekit.io/](https://agents-playground.livekit.io/):
    - Populate your .env with your LiveKit project URL, API key, and secret.
