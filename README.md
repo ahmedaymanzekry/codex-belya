@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./Codex Belya logo.png" alt="Codex Belya logo" width="300" height="300">
+  <img src="./resources/Codex Belya logo.png" alt="Codex Belya logo" width="300" height="300">
 </p>
 
 Codex Belya is the first "Voice Coding" agent made for professionals (Think of it like Iron Man's Jarvis from 2008). Belya is a voice agentic AI companion for the Codex CLI. Belya is mainly made for developers to enhance their experience of using Codex CLI or IDE extension.
@@ -16,6 +16,14 @@ So, you basically talk to your code (as we all do anyways when we are in the zon
 - **Codex utilization insight.** Capture Codex token usage, rate-limit windows, and auto-notify when you hit 80 / 90 / 95 % of quota.
 - **Codex Session administration.** List and resume past Codex sessions, rename sessions, switch approval policies and models, compact context, or set working branches on demand.
 - **LiveKit ready.** Works with the Agents Playground or any LiveKit project, re-uses stored room and participant IDs for quicker reconnects.
+
+---
+
+## Accessibility & Voice-First Coding
+
+Belya lets you operate your development workflow **hands-free**, which can meaningfully help developers with **vision challenges or limited mobility**. You can create and switch branches, stage/commit, review diffs, and dispatch tasks to Codex **entirely by voice**. The agent reads back confirmations before any risky action, summarizes diffs and errors in natural language, and logs transcripts for later review. So, please recommend Belya to any friend or colleage who would benefit from its features in his coding experience.
+
+**Note:** initial Git credential and environment setup and rare complex merge conflicts may still require manual steps, but Belya will guide you verbally and confirm destructive commands with you before execution.
 
 ---
 
