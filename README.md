@@ -1,12 +1,12 @@
 # Codex Belya
 
-Codex Belya is a voice agentic AI companion for the Codex CLI (Think of it like Iron Man's Jarvis). Inspired by the Egyptian term for the shop-floor assistant “belya” who keeps the garage humming, this agent keeps your coding workflow on track: you speak the tasks aloud (as we all do anyways when we are in the zone :D ), it coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
+Codex Belya is a voice agentic AI companion for the Codex CLI (Think of it like Iron Man's Jarvis). Inspired by the Egyptian term for the shop-floor assistant “belya” who keeps the mechanic's garage humming, this agent keeps your coding workflow light, interactive, and on track: you talk to your code (as we all do anyways when we are in the zone :D ), Belya coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
 
 ---
 
 ## Why Belya?
 
-- **Conversational tasking.** Dictate multi-step coding requests and let Belya assemble the perfect prompt for Codex.
+- **Multilingual Conversations.** Dictate multi-step coding requests and let Belya assemble the perfect prompt for Codex. Talk to it in your own language ([supported languages](https://platform.openai.com/docs/guides/speech-to-text/supported-languages#supported-languages))
 - **Full git control.** Check out, create, delete, commit, fetch, pull, push, and switch branches safely—capabilities the Codex CLI alone does not provide.
 - **Codex Session memory.** Persist session history, branch context, Codex settings, and task outcomes in SQLite for seamless handoffs.
 - **Codex utilization insight.** Capture Codex token usage, rate-limit windows, and auto-notify when you hit 80 / 90 / 95 % of quota.
