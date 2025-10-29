@@ -11,7 +11,7 @@ So, you basically talk to your code (as we all do anyways when we are in the zon
 ## Why Belya?
 
 - **Multilingual Conversations.** Dictate multi-step coding requests and let Belya assemble the perfect prompt for Codex. Talk to it in your own language ([supported languages](https://platform.openai.com/docs/guides/speech-to-text/supported-languages#supported-languages))
-- **Full git control.** Check out, create, delete, commit, fetch, pull, push, and switch branches safely—capabilities the Codex CLI alone does not provide.
+- **Full git control.** Check status/diff/add/restore/reset/stash/merge, check out, create, delete, commit, fetch, pull, push, and switch branches safely—capabilities the Codex CLI alone does not provide.
 - **Codex Session memory.** Persist session history, branch context, Codex settings, and task outcomes in SQLite for seamless handoffs.
 - **Codex utilization insight.** Capture Codex token usage, rate-limit windows, and auto-notify when you hit 80 / 90 / 95 % of quota.
 - **Codex Session administration.** List and resume past Codex sessions, rename sessions, switch approval policies and models, compact context, or set working branches on demand.
@@ -140,12 +140,26 @@ pip install -r requirements.txt
 | --- | --- |
 | Session orchestration | Start new Codex sessions, list previous sessions, switch between them, rename sessions, and compact session context for an optimized Codex utilization. |
 | Persistent context | Store branch metadata, utilization metrics, and LiveKit room/participant IDs in SQLite. |
-| Git automation | Full local control: check current branch, create/delete/switch branches, commit, fetch, pull, push; all via voice commands. |
+| Git automation | Full local control: status, diff, add, restore, reset, stash, merge, mv, rm, clean, check current branch, create/delete/switch branches, commit, fetch, pull, push—all via voice commands. |
 | Token analytics | Track total tokens, last-task tokens, 5-hour & weekly usage; warn when thresholds are exceeded (you need to tell Belya your user rate limits). |
 | Codex configuration | Adjust approval policy and model on demand; defaults to risk-free “never” policy until the user requests changes. |
 | Error resilience | Every function tool routes failures back to the voice assistant with user-friendly explanations for the error. |
 
 ---
+
+## Voice Git Commands
+
+- `status` – Report staged, unstaged, untracked, and ignored files plus the active branch.
+- `add` – Stage specific paths or everything if no path is provided.
+- `diff` – Summarize line additions/removals and include the raw staged/unstaged patches for deeper inspection.
+- `restore` – Discard working tree changes or unstage files without touching the worktree.
+- `reset` – Unstage paths or move the current branch with soft/mixed/hard/keep/merge resets.
+- `stash` – Push, list, pop, apply, drop, or clear stash entries (optionally include untracked files).
+- `merge` – Merge another branch into the current one with optional `--no-ff` or `--squash`.
+- `mv` – Rename or move tracked files while keeping git history intact.
+- `rm` – Remove tracked files from the index and working tree (`force` supported).
+- `clean` – Delete untracked files (and optionally directories) when you confirm with `force=True`.
+- Branch helpers – `check_current_branch`, `create_branch`, `delete_branch`, `switch_branch`, `push_branch`, `fetch_updates`, `pull_updates`, `commit_changes`.
 
 ## Example Workflow
 
