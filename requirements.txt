@@ -1,0 +1,6 @@
+gitpython>=3.1.43
+livekit-agents>=0.6.0
+livekit-plugins-openai>=0.6.0
+livekit-plugins-silero>=0.6.0
+livekit-plugins-noise-cancellation>=0.6.0
+python-dotenv>=1.0.1
