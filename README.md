@@ -113,7 +113,7 @@ pip install -r requirements.txt
 1. Ensure `.env` is populated and your Python environment is active.
 2. Start the worker:
    ```bash
-   python3 main.py start
+   python3 <path-to-cloned-repository>/main.py start
    ```
 3. Open [https://agents-playground.livekit.io/](https://agents-playground.livekit.io/):
    - Populate your .env with your LiveKit project URL, API key, and secret.
