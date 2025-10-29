@@ -1,3 +1,7 @@
+<a>
+  <img src="./Codex Belya logo.png" alt="Codex Belya logo" width="100" height="100">
+</a>
+
 # Codex Belya
 
 Codex Belya is the first "Voice Coding" agent made for professionals (Think of it like Iron Man's Jarvis from 2008). Belya is a voice agentic AI companion for the Codex CLI. Belya is mainly made for developers to enhance their experience of using Codex CLI or IDE extension.
