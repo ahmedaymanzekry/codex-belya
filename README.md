@@ -79,12 +79,12 @@ OPENAI_API_KEY=<your-openai-api-key>
 Dependencies are listed in `requirements.txt`:
 
 ```
-gitpython>=3.1.43
-livekit-agents>=0.6.0
-livekit-plugins-openai>=0.6.0
-livekit-plugins-silero>=0.6.0
-livekit-plugins-noise-cancellation>=0.6.0
-python-dotenv>=1.0.1
+gitpython>=3.1.45
+livekit-agents>=1.2.15
+livekit-plugins-openai>=1.2.15
+livekit-plugins-silero>=1.2.15
+livekit-plugins-noise-cancellation>=0.2.5
+python-dotenv>=0.9.9
 ```
 
 Install them with:
