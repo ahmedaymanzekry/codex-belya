@@ -18,6 +18,8 @@ So, you basically talk to your code (as we all do anyways when we are in the zon
 - **Codex Session administration.** List and resume past Codex sessions, rename sessions, switch approval policies and models, compact context, or set working branches on demand.
 - **LiveKit ready.** Works with the Agents Playground or any LiveKit project, re-uses stored room and participant IDs for quicker reconnects.
 
+**Note**  currently welcoming pilot stage users and this is a canary release so feedback is most welcome.
+
 ---
 
 ## Accessibility & Voice-First Coding
@@ -194,6 +196,7 @@ Behind the scenes, Belya queues your instructions, issues the Codex prompt, trac
 
 ## TODO
 
+- A multi-agent version
 - Add a local frontend (will require local livekit server, but the cloud-hosted playground is working fine for now).
 - Add RAG-enabled knowledge grounding using LangChain (project docs, codebase, etc.).
 ---
