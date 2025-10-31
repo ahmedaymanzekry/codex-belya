@@ -85,6 +85,7 @@ livekit-plugins-openai>=1.2.15
 livekit-plugins-silero>=1.2.15
 livekit-plugins-noise-cancellation>=0.2.5
 python-dotenv>=0.9.9
+openai-agents>=0.4.2
 ```
 
 Install them with:
