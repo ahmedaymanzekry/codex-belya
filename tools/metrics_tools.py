@@ -434,7 +434,7 @@ class SessionMetricsMixin:
         codex_result: Any,
         entry_type: str = "task",
     ) -> Optional[str]:
-        session_id = getattr(self.CodexAgent.session, "session_id", None)
+        session_id = self._current_session_id() if hasattr(self, "_current_session_id") else None
         if not session_id:
             return None
 
