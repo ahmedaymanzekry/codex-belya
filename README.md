@@ -55,6 +55,35 @@ npm install -g codex       # optional; you can rely on npx -y codex instead
 
 ---
 
+## Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone git@github.com:ahmedaymanzekry/codex-belya.git
+   cd codex-belya
+   ```
+   You will need Github SSH keys configured.
+2. **Create and activate a virtual environment**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+   You can also use your project's environment, but don't forget to install the requirements.
+3. **Install Python requirements**
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. **Verify Node and Codex CLI**
+   ```bash
+   node --version
+   npx --version
+   npx -y codex --help
+   ```
+5. **Configure environment variables**
+   Create and edit .env with LiveKit & OpenAI keys as described above
+   
+---
+
 ## Environment Variables
 
 Create a `.env` file in the project root with the following values:
@@ -94,35 +123,6 @@ Install them with:
 pip install -r requirements.txt
 ```
 
----
-
-## Installation Steps
-
-1. **Clone the repository**
-   ```bash
-   git clone git@github.com:ahmedaymanzekry/codex-belya.git
-   cd codex-belya
-   ```
-   You will need Github SSH keys configured.
-2. **Create and activate a virtual environment**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-   You can also use your project's environment, but don't forget to install the requirements.
-3. **Install Python requirements**
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Verify Node and Codex CLI**
-   ```bash
-   node --version
-   npx --version
-   npx -y codex --help
-   ```
-5. **Configure environment variables**
-   Create and edit .env with LiveKit & OpenAI keys as described above
-   
 ---
 
 ## Running the Voice Assistant
