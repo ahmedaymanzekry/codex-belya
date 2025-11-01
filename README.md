@@ -6,6 +6,28 @@
 Codex Belya is the first "Voice Coding" agent made for professionals (Think of it like Iron Man's Jarvis from 2008). Belya is a voice agentic AI companion for the Codex CLI. Belya is mainly made for developers to enhance their experience of using Codex CLI or IDE extension.
 The name is inspired by the Egyptian slang term for the shop-floor assistant “belya” who keeps the mechanic's garage organized and flowing. Likewise, Belya, the voice assistant agent, keeps your coding workflow light, interactive, and on track.
 So, you basically talk to your code (as we all do anyways when we are in the zone :D ), Belya then coordinates with Codex CLI, keeps meticulous records, and even manages your git branches so you never lose the flow.
+Today, Codex Belya orchestrates a multi-agent environment where specialized assistants collaborate to cover everything from Git automation to project analytics and custom workflows.
+Each agent exposes its own specialized function tools, so the platform now supports multiple functionalities tailored to those roles.
+
+---
+
+## Table of Contents
+
+- [Why Belya?](#why-belya)
+- [Accessibility & Voice-First Coding](#accessibility--voice-first-coding)
+- [Prerequisites](#prerequisites)
+- [Installation Steps](#installation-steps)
+- [Environment Variables](#environment-variables)
+- [Python Dependencies](#python-dependencies)
+- [Running the Voice Assistant](#running-the-voice-assistant)
+- [Multi-Agent Orchestration](#multi-agent-orchestration)
+- [Agent Tutorial](#agent-tutorial)
+- [Feature Matrix](#feature-matrix)
+- [Voice Git Commands](#voice-git-commands)
+- [Example Workflow](#example-workflow)
+- [Acknowledgements](#acknowledgements)
+- [TODO](#todo)
+- [License](#license)
 
 ---
 
@@ -144,6 +166,21 @@ pip install -r requirements.txt
      - Manage session history, Codex utilization, and compress Codex context.
 4. Open your code editor and watch the magic happen (see your Codex code edits and reviews brought to life!).
 5. Sit back! Relax! and start professional "Voice Coding".
+
+---
+
+## Multi-Agent Orchestration
+
+Head-Belya now coordinates multiple agents, each with dedicated function tools for focused responsibilities; think git operations, workspace insights, or custom automation you plug in. The orchestrator routes voice intents to the right specialist, keeps shared context in sync, and lets you extend the system without rewriting the core assistant.
+
+- Extend the roster with purpose-built agents (e.g., documentation lookup, analytics, deployment).
+- Register function tools per agent so Belya can call precise capabilities on demand.
+- Keep conversations consistent while different agents execute in parallel pipelines.
+
+## Agent Tutorial
+
+Ready to add your own specialists? Follow the step-by-step guide in [AGENT_TUTORIAL.md](AGENT_TUTORIAL.md) to register new agents and wire up their tools for Head-Belya.
+
 ---
 
 ## Feature Matrix
@@ -197,7 +234,7 @@ Behind the scenes, Belya queues your instructions, issues the Codex prompt, trac
 
 ## TODO
 
-- A multi-agent version
+- [x] A multi-agent version
 - Add a local frontend (will require local livekit server, but the cloud-hosted playground is working fine for now).
 - Add RAG-enabled knowledge grounding using LangChain (project docs, codebase, etc.).
 ---
