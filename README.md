@@ -179,7 +179,7 @@ Head-Belya now coordinates multiple agents, each with dedicated function tools f
 
 ## Agent Tutorial
 
-Ready to add your own specialists? Follow the step-by-step guide in [AGENT_TUTORIAL.md](AGENT_TUTORIAL.md) to register new agents and wire up their tools for Head-Belya.
+Ready to add your own specialists? Follow the step-by-step guide in [AGENT_TUTORIAL.md](resources/AGENT_TUTORIAL.md) to register new agents and wire up their tools for Head-Belya.
 
 ---
 
