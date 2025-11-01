@@ -3,7 +3,7 @@ import os
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from git import Repo
-from git.exc import GitCommandError
+from git.exc import GitCommandError, InvalidGitRepositoryError, NoSuchPathError
 from livekit.agents import function_tool
 
 
@@ -100,6 +100,32 @@ class GitFunctionToolsMixin:
     def _repo(self) -> Repo:
         repo_path = os.getcwd()
         return Repo(repo_path)
+
+    @function_tool
+    async def git_init(self, path: Optional[str] = None) -> str:
+        """Initialize a git repository in the specified directory or the current working directory."""
+        try:
+            target_path = os.path.abspath(path) if path else os.getcwd()
+
+            if os.path.exists(target_path) and not os.path.isdir(target_path):
+                return f"Cannot initialize a git repository because {target_path} is not a directory."
+
+            if not os.path.exists(target_path):
+                os.makedirs(target_path, exist_ok=True)
+
+            try:
+                Repo(target_path)
+            except (InvalidGitRepositoryError, NoSuchPathError):
+                pass
+            else:
+                logger.info("git init skipped; repository already exists at %s", target_path)
+                return f"A git repository already exists at {target_path}."
+
+            Repo.init(target_path)
+            logger.info("Initialized a new git repository at %s", target_path)
+            return f"Initialized a new git repository at {target_path}."
+        except Exception as error:  # pragma: no cover - handled via _handle_tool_error
+            return self._handle_tool_error("initializing a git repository", error)
 
     @function_tool
     async def status(self) -> str:
