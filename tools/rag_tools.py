@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
 from livekit.agents import RunContext, function_tool
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 logger = logging.getLogger(__name__)
@@ -110,10 +110,8 @@ class RAGFunctionToolsMixin:
                 continue
 
             rel_path = os.path.relpath(path, root)
-            chunks = self._rag_splitter.create_documents(
-                [raw_text],
-                metadatas=[{"source": rel_path}],
-            )
+            base_document = Document(page_content=raw_text, metadata={"source": rel_path})
+            chunks = self._rag_splitter.split_documents([base_document])
             for chunk_index, chunk in enumerate(chunks):
                 chunk.metadata.setdefault("source", rel_path)
                 chunk.metadata["chunk_index"] = chunk_index

@@ -6,3 +6,4 @@ livekit-plugins-noise-cancellation>=0.2.5
 python-dotenv>=0.9.9
 openai-agents>=0.4.2
 langchain>=1.0.3
+langchain-text-splitters>=0.0.1
