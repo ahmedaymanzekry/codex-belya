@@ -107,6 +107,8 @@ class SessionStore:
     def __init__(self, db_path: Optional[str] = None) -> None:
         base_dir = os.path.dirname(os.path.abspath(__file__))
         self.db_path = db_path or os.path.join(base_dir, "codex_sessions.sqlite3")
+        self.tasks_dir = os.path.join(base_dir, "tasks")
+        os.makedirs(self.tasks_dir, exist_ok=True)
         self._ensure_schema()
 
     @contextmanager
@@ -151,21 +153,37 @@ class SessionStore:
                 (session_id,),
             ).fetchone()
             if existing:
+                stored_metadata = json.loads(existing["metadata"])
+                metadata = _ensure_metadata_defaults(stored_metadata)
                 branch_to_store = branch_name or existing["branch_name"]
-                conn.execute(
-                    "UPDATE sessions SET branch_name = ?, updated_at = ? WHERE session_id = ?",
-                    (branch_to_store, now, session_id),
+                created_at = existing["created_at"]
+                self._ensure_archive_file(
+                    metadata,
+                    session_id=session_id,
+                    branch_name=branch_to_store,
+                    created_at=created_at,
+                    updated_at=now,
                 )
-                metadata = _ensure_metadata_defaults(json.loads(existing["metadata"]))
+                conn.execute(
+                    "UPDATE sessions SET branch_name = ?, metadata = ?, updated_at = ? WHERE session_id = ?",
+                    (branch_to_store, json.dumps(metadata), now, session_id),
+                )
                 return SessionRecord(
                     session_id=session_id,
                     branch_name=branch_to_store,
-                    created_at=existing["created_at"],
+                    created_at=created_at,
                     updated_at=now,
                     metadata=metadata,
                 )
 
             metadata = _default_metadata()
+            self._ensure_archive_file(
+                metadata,
+                session_id=session_id,
+                branch_name=branch_name,
+                created_at=now,
+                updated_at=now,
+            )
             conn.execute(
                 """
                 INSERT INTO sessions (session_id, branch_name, metadata, created_at, updated_at)
@@ -268,6 +286,14 @@ class SessionStore:
                 entry["extra"] = extra
 
             metadata["tasks"].append(entry)
+
+            self._ensure_archive_file(
+                metadata,
+                session_id=session_id,
+                branch_name=branch_name,
+                created_at=created_at,
+                updated_at=now,
+            )
 
             conn.execute(
                 "INSERT OR IGNORE INTO sessions (session_id, branch_name, metadata, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
@@ -403,6 +429,76 @@ class SessionStore:
                 (new_session_id, now, old_session_id),
             )
             return updated.rowcount > 0
+
+    def _ensure_archive_file(
+        self,
+        metadata: Dict[str, Any],
+        *,
+        session_id: str,
+        branch_name: Optional[str],
+        created_at: str,
+        updated_at: str,
+    ) -> None:
+        """Ensure a per-session archive file exists and mirrors stored tasks."""
+        archive_filename = metadata.get("task_archive_file")
+        archive_path = None
+        if archive_filename:
+            archive_path = os.path.join(self.tasks_dir, archive_filename)
+            if not os.path.exists(archive_path):
+                archive_filename = None
+
+        if not archive_filename:
+            archive_filename = self._generate_archive_filename()
+            metadata["task_archive_file"] = archive_filename
+            archive_path = os.path.join(self.tasks_dir, archive_filename)
+        else:
+            archive_path = os.path.join(self.tasks_dir, archive_filename)
+
+        tasks = metadata.get("tasks")
+        if not isinstance(tasks, list):
+            tasks = []
+            metadata["tasks"] = tasks
+
+        self._write_archive_file(
+            archive_path,
+            session_id=session_id,
+            branch_name=branch_name,
+            created_at=created_at,
+            updated_at=updated_at,
+            tasks=tasks,
+        )
+
+    def _generate_archive_filename(self) -> str:
+        """Build a unique, timestamped archive filename."""
+        timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+        base_name = f"session-{timestamp}.json"
+        candidate = base_name
+        suffix = 1
+        while os.path.exists(os.path.join(self.tasks_dir, candidate)):
+            candidate = f"session-{timestamp}-{suffix}.json"
+            suffix += 1
+        return candidate
+
+    def _write_archive_file(
+        self,
+        archive_path: str,
+        *,
+        session_id: str,
+        branch_name: Optional[str],
+        created_at: str,
+        updated_at: str,
+        tasks: List[Dict[str, Any]],
+    ) -> None:
+        payload = {
+            "session_id": session_id,
+            "branch_name": branch_name,
+            "created_at": created_at,
+            "updated_at": updated_at,
+            "tasks": tasks,
+        }
+        os.makedirs(self.tasks_dir, exist_ok=True)
+        with open(archive_path, "w", encoding="utf-8") as stream:
+            json.dump(payload, stream, indent=2)
 
     def get_livekit_state(self) -> Dict[str, Any]:
         with self._connect() as conn:
