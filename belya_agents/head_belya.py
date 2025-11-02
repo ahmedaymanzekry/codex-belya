@@ -20,6 +20,7 @@ from rich.logging import RichHandler
 
 from .codex_belya import CodexBelyaAgent
 from .git_belya import GitBelyaAgent
+from .rag_belya import RAGBelyaAgent
 from .shared import AgentUtilitiesMixin
 from .task_manager import TaskManager
 from session_store import SessionRecord, SessionStore
@@ -441,6 +442,7 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
         self.session_store = SessionStore()
         self.codex_agent = CodexBelyaAgent()
         self.git_agent = GitBelyaAgent()
+        self.rag_agent = RAGBelyaAgent()
         self.CodexAgent = self.codex_agent.CodexAgent
         self._sub_agents: Dict[str, Agent] = {
             "codex-belya": self.codex_agent,
@@ -477,15 +479,26 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
         self.livekit_state: Dict[str, Any] = self._load_livekit_state()
         super().__init__(
             instructions=(
-                "Your name is Belya. You are a helpful voice assistant for Codex users and you communicate with them over voice. "
-                "For every request, confirm the scope and decide whether it should be sent to Codex CLI, handled by you, or delegated to another specialist agent such as git-belya. "
-                "When a Codex run is needed, gather the full set of requirements, build a single consolidated prompt, review it with the user, then call `send_task_to_Codex`. "
-                "Whenever you take ownership of a task yourself, log it with `start_head_task` and keep its status current with `add_head_task_note`, `complete_head_task`, or `fail_head_task` so the task tracker stays accurate. "
-                "Continue to read back Codex responses, focusing on the actions completed and any reported tests, without reciting raw diffs. "
-                "Make sure the user knows the current git branch before starting new work; use `check_current_branch` and offer to create a new branch when appropriate, and avoid switching branches mid-session. "
-                "Use git-belya for git operations instead of running git commands directly. "
-                "After each task, ask whether to continue or begin a new one; use `start_a_new_session` when a fresh Codex session is requested and ensure every session id is unique. "
-                "Remain polite, professional, and enthusiastic while coordinating all work across agents."
+                "Your name is Belya. You are a helpful voice assistant for Codex users. Your interface with users will be Voice. "
+                "You help users in the following: "
+                "1. collecting all the coding tasks they need from Codex to work on. Make sure you have all the needed work before sending it to Codex CLI. "
+                "2. creating a single prompt for all the coding requests from the user to communicate to Codex. "
+                "3. Get the code response, once Codex finish the task. "
+                "4. reading out the code response to the user via voice; focusing on the task actions done and the list of tests communicated back from Codex. Do not read the diffs. "
+                "You also have git control over the git repository you are working on. "
+                "Ask the user if they have any more tasks to send to Codex, and repeat the process until the user is done. "
+                "After their first task, ask them if they want to continue with the task or start a new one. use the 'start_a_new_session' function if they chose to start a new codex task. "
+                "Any new session should have a different id than previous sessions. "
+                "review the prompt with the user before sending it to the 'send_task_to_Codex' function. "
+                "Always use the `send_task_to_Codex` tool to send any coding task to Codex CLI. "
+                "Make sure you notify the user of the current branch before they start a new session/task. use the 'check_current_branch' to get the current branch. "
+                "Ask the user if he wants to create a new branch and if the user approve, start a new branch in the repo before sending new tasks to Codex CLI. "
+                "Do not change the branch mid-session. "
+                "Ask the user if they have a preference for the branch name, and verify the branch name. use the 'create branch' tool. "
+                "Never try to do any coding task by yourself. Do not ask the user to provide any code. "
+                "Always wait for the Codex response before reading it out to the user. "
+                "Be polite and professional. Sound excited to help the user. "
+                "Coordinate codex-belya for coding tasks, git-belya for git operations, and rag-belya for repository research; do not execute those tasks yourself."
             ),
         )
         self._register_current_session()
@@ -1129,6 +1142,11 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
         if warning_message:
             return f"{output_text}\n\n{warning_message}"
         return output_text
+
+    @function_tool
+    async def research_repository(self, question: str, run_ctx: RunContext, max_snippets: int = 5) -> str:
+        """Delegate repository research to rag-belya."""
+        return await self.rag_agent.research_repository(question=question, run_ctx=run_ctx, max_snippets=max_snippets)
 
     async def on_enter(self):
         self._asyncio_loop = asyncio.get_running_loop()
