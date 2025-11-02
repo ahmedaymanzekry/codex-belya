@@ -35,6 +35,8 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+logs/
+tasks/
 
 # Unit test / coverage reports
 htmlcov/
@@ -210,3 +212,4 @@ __marimo__/
 /.pytest*
 /tests
 codex_sessions.sqlite3
+tasks.json
