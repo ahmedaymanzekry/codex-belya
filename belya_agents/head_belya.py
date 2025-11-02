@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from livekit.agents import Agent, RunContext, function_tool
 
@@ -24,6 +24,12 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
         self.codex_agent = CodexBelyaAgent()
         self.git_agent = GitBelyaAgent()
         self.CodexAgent = self.codex_agent.CodexAgent
+        self._sub_agents: Dict[str, Agent] = {
+            "codex-belya": self.codex_agent,
+            "git-belya": self.git_agent,
+        }
+        self._agent_aliases: Dict[str, str] = {}
+        self.agent_tool_catalog: Dict[str, List[Dict[str, str]]] = {}
 
         self.sessions_ids_used = [
             record.session_id for record in self.session_store.list_sessions()
@@ -59,6 +65,8 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
             ),
         )
         self._register_current_session()
+        self._agent_aliases = self._build_agent_alias_map()
+        self.refresh_agent_tool_catalog()
 
     @function_tool
     async def send_task_to_Codex(self, task_prompt: str, run_ctx: RunContext) -> Optional[str]:
@@ -81,6 +89,105 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
                 return f"{output_text}\n\n{warning_message}"
             return output_text
         return None
+
+    def _build_agent_alias_map(self) -> Dict[str, str]:
+        """Construct a lowercase alias map for known agents for easy lookup."""
+        aliases: Dict[str, str] = {
+            "head-belya": "head-belya",
+            "head": "head-belya",
+        }
+        for agent_key, agent in self._sub_agents.items():
+            aliases[agent_key] = agent_key
+            primary = agent_key.split("-", 1)[0]
+            aliases[primary] = agent_key
+            trimmed = agent_key.replace("-belya", "")
+            aliases[trimmed] = agent_key
+            aliases[agent.__class__.__name__] = agent_key
+        return {alias.lower(): canonical for alias, canonical in aliases.items()}
+
+    def _managed_agents(self) -> Dict[str, Agent]:
+        """Return a map of agent identifiers to agent instances."""
+        return {"head-belya": self, **self._sub_agents}
+
+    def register_sub_agent(self, agent_key: str, agent: Agent) -> None:
+        """Register or replace a subordinate agent and refresh discovery metadata."""
+        if not agent_key:
+            raise ValueError("agent_key must be provided when registering sub agents.")
+        self._sub_agents[agent_key] = agent
+        self._agent_aliases = self._build_agent_alias_map()
+        self.refresh_agent_tool_catalog()
+
+    def _resolve_agent_alias(self, agent_name: str) -> Optional[str]:
+        """Normalize incoming agent names to a canonical identifier."""
+        if not agent_name:
+            return None
+        return self._agent_aliases.get(agent_name.lower())
+
+    def _discover_tools_for_agent(self, agent: Agent) -> List[Dict[str, str]]:
+        """Inspect an agent for function tools exposed via @function_tool."""
+        tool_entries: List[Dict[str, str]] = []
+        for attr_name, attr_value in inspect.getmembers(agent.__class__, predicate=callable):
+            tool_info = getattr(attr_value, "__livekit_tool_info", None)
+            if not tool_info:
+                continue
+            bound_method = getattr(agent, attr_name)
+            try:
+                signature = str(inspect.signature(bound_method))
+            except (TypeError, ValueError):
+                signature = "()"
+            docstring = inspect.getdoc(bound_method) or inspect.getdoc(attr_value) or ""
+            description = tool_info.description or (docstring.splitlines()[0] if docstring else "")
+            tool_name = tool_info.name or attr_name
+            tool_entries.append(
+                {
+                    "name": str(tool_name),
+                    "attribute": attr_name,
+                    "signature": signature,
+                    "description": description,
+                    "doc": docstring,
+                }
+            )
+        return sorted(tool_entries, key=lambda entry: entry["name"])
+
+    def refresh_agent_tool_catalog(self) -> Dict[str, List[Dict[str, str]]]:
+        """Recompute the cached mapping of agents to their available function tools."""
+        catalog: Dict[str, List[Dict[str, str]]] = {}
+        for agent_key, agent in self._managed_agents().items():
+            catalog[agent_key] = self._discover_tools_for_agent(agent)
+        self.agent_tool_catalog = catalog
+        return catalog
+
+    @function_tool
+    async def list_available_agent_functions(self, agent_name: Optional[str] = None) -> str:
+        """Enumerate the function tools currently exposed by managed agents."""
+        catalog = self.refresh_agent_tool_catalog()
+        if agent_name:
+            canonical = self._resolve_agent_alias(agent_name)
+            if not canonical:
+                known_agents = ", ".join(sorted(catalog.keys()))
+                return (
+                    f"I don't recognize an agent named {agent_name}. "
+                    f"I currently manage the following agents: {known_agents}."
+                )
+            tools = catalog.get(canonical, [])
+            if not tools:
+                return f"{canonical} does not expose any function tools right now."
+            lines = [
+                f"- {entry['name']}{entry['signature']}: {entry['description']}"
+                for entry in tools
+            ]
+            formatted = "\n".join(lines)
+            return f"Here are the function tools available on {canonical}:\n{formatted}"
+
+        segments = []
+        for agent_key, tools in catalog.items():
+            if tools:
+                tool_list = ", ".join(entry["name"] for entry in tools)
+            else:
+                tool_list = "(no function tools registered)"
+            segments.append(f"{agent_key}: {tool_list}")
+        overview = "\n".join(segments)
+        return f"I currently manage these agents and their function tools:\n{overview}"
 
     def _safe_get_current_branch(self) -> str | None:
         """Best-effort attempt to read the current git branch."""
@@ -245,28 +352,17 @@ def _create_git_delegate(tool_name: str):
     return function_tool(_delegated)
 
 
-# Delegate each git-related function tool to git-belya so the supervisor remains the only entry point.
-GIT_TOOL_NAMES = [
-    "status",
-    "add",
-    "diff",
-    "restore",
-    "reset",
-    "stash",
-    "merge",
-    "mv",
-    "rm",
-    "clean",
-    "check_current_branch",
-    "create_branch",
-    "commit_changes",
-    "pull_updates",
-    "fetch_updates",
-    "list_branches",
-    "delete_branch",
-    "push_branch",
-    "switch_branch",
-]
+def _collect_function_tool_names(agent_cls: Type[Agent]) -> List[str]:
+    """Return all @function_tool names declared on the given agent class."""
+    tool_names: List[str] = []
+    for attr_name, attr_value in inspect.getmembers(agent_cls, predicate=callable):
+        if getattr(attr_value, "__livekit_tool_info", None):
+            tool_names.append(attr_name)
+    return tool_names
 
-for _tool in GIT_TOOL_NAMES:
+
+# Delegate each git-related function tool to git-belya so the supervisor remains the only entry point.
+for _tool in _collect_function_tool_names(GitBelyaAgent):
+    if hasattr(HeadBelyaAgent, _tool):
+        continue
     setattr(HeadBelyaAgent, _tool, _create_git_delegate(_tool))
