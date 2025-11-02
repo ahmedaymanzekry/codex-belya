@@ -8,6 +8,7 @@ from livekit.agents import Agent, RunContext, function_tool
 
 from .codex_belya import CodexBelyaAgent
 from .git_belya import GitBelyaAgent
+from .rag_belya import RAGBelyaAgent
 from .shared import AgentUtilitiesMixin
 from session_store import SessionRecord, SessionStore
 from tools.codex_tools import CodexTaskResult
@@ -23,6 +24,7 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
         self.session_store = SessionStore()
         self.codex_agent = CodexBelyaAgent()
         self.git_agent = GitBelyaAgent()
+        self.rag_agent = RAGBelyaAgent()
         self.CodexAgent = self.codex_agent.CodexAgent
 
         self.sessions_ids_used = [
@@ -55,7 +57,7 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
                 "Never try to do any coding task by yourself. Do not ask the user to provide any code. "
                 "Always wait for the Codex response before reading it out to the user. "
                 "Be polite and professional. Sound excited to help the user. "
-                "Coordinate codex-belya for coding tasks and git-belya for git operations; do not execute those tasks yourself."
+                "Coordinate codex-belya for coding tasks, git-belya for git operations, and rag-belya for repository research; do not execute those tasks yourself."
             ),
         )
         self._register_current_session()
@@ -216,6 +218,11 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
         if warning_message:
             return f"{output_text}\n\n{warning_message}"
         return output_text
+
+    @function_tool
+    async def research_repository(self, question: str, run_ctx: RunContext, max_snippets: int = 5) -> str:
+        """Delegate repository research to rag-belya."""
+        return await self.rag_agent.research_repository(question=question, run_ctx=run_ctx, max_snippets=max_snippets)
 
     async def on_enter(self):
         self.session.generate_reply(

@@ -210,3 +210,5 @@ __marimo__/
 /.pytest*
 /tests
 codex_sessions.sqlite3
+/tasks
+tasks.json
