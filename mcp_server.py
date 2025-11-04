@@ -7,12 +7,15 @@ from agents.mcp import MCPServerStdio
 logger = logging.getLogger(__name__)
 
 class CodexMCPServer(MCPServerStdio):
-    def __init__(self) -> None:
+    def __init__(self, enable_search: bool = False) -> None:
+        args = ["-y", "codex", "mcp-server"]
+        if enable_search:
+            args = ["-y", "codex", "--search", "mcp-server"]
         super().__init__(
             name="Codex MCP Server",
             params={
                 "command": "npx",
-                "args": ["-y", "codex", "mcp-server"],
+                "args": args,
                 },
             client_session_timeout_seconds=360000,
         )
@@ -49,21 +52,31 @@ class CodexCLIAgent():
         self.settings: Dict[str, Any] = {
             "approval_policy": "never",
             "model": "default",
+            "web_search_enabled": False,
         }
     
     async def send_task(self, task_prompt: str) -> Any:
         """Sends the task prompt to Codex via MCP server and returns the result."""
-        async with CodexMCPServer() as mcp_server:
+        enable_search = bool(self.settings.get("web_search_enabled", False))
+        async with CodexMCPServer(enable_search=enable_search) as mcp_server:
             self.server_agent.mcp_servers = [mcp_server]
             result = await Runner.run(self.server_agent, task_prompt, session=self.session)
             return result
 
-    def update_settings(self, *, approval_policy: Optional[str] = None, model: Optional[str] = None) -> None:
+    def update_settings(
+        self,
+        *,
+        approval_policy: Optional[str] = None,
+        model: Optional[str] = None,
+        web_search_enabled: Optional[bool] = None,
+    ) -> None:
         """Record desired Codex session settings for future calls."""
         if approval_policy:
             self.settings["approval_policy"] = approval_policy
         if model:
             self.settings["model"] = model
+        if web_search_enabled is not None:
+            self.settings["web_search_enabled"] = bool(web_search_enabled)
 
     def rename_session(self, new_session_id: str) -> bool:
         """Rename the active session if possible."""

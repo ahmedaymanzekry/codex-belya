@@ -45,6 +45,7 @@ def _default_settings() -> Dict[str, Any]:
     return {
         "approval_policy": "never",
         "model": "default",
+        "web_search_enabled": False,
     }
 
 

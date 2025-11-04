@@ -402,8 +402,9 @@ class SessionManagementToolsMixin(SessionMetricsMixin):
         self,
         approval_policy: str | None = None,
         model: str | None = None,
+        web_search_enabled: bool | None = None,
     ) -> str:
-        """Update Codex session approval policy or model selections."""
+        """Update Codex session approval policy, model selection, or web search preference."""
         try:
             session_id = self._current_session_id()
             if not session_id:
@@ -433,15 +434,24 @@ class SessionManagementToolsMixin(SessionMetricsMixin):
                 settings_update["model"] = model
                 messages.append(f"model set to {model}")
 
+            if web_search_enabled is not None:
+                search_state = bool(web_search_enabled)
+                settings_update["web_search_enabled"] = search_state
+                messages.append(
+                    "web search enabled" if search_state else "web search disabled"
+                )
+
             if not settings_update:
                 current_policy = current_settings.get("approval_policy", self.available_approval_policies[0])
                 current_model = current_settings.get("model", self.available_models[0])
+                web_search_status = current_settings.get("web_search_enabled", False)
                 policy_options = ", ".join(self.available_approval_policies)
                 model_options = ", ".join(self.available_models)
                 return (
                     f"The current Codex settings are approval policy '{current_policy}' and model '{current_model}'. "
+                    f"Web search is currently {'enabled' if web_search_status else 'disabled'}. "
                     f"Supported approval policies: {policy_options}. Supported models: {model_options}. "
-                    "Let me know which ones you would like to switch to."
+                    "Let me know which ones you would like to switch to, or whether to toggle web search."
                 )
 
             updated_settings = dict(current_settings)
@@ -477,7 +487,8 @@ class SessionManagementToolsMixin(SessionMetricsMixin):
             model_options = ", ".join(self.available_models)
             return (
                 f"Updated Codex session settings: {summary}. "
-                f"Available approval policies: {policy_options}. Available models: {model_options}."
+                f"Available approval policies: {policy_options}. Available models: {model_options}. "
+                "Web search can be toggled on or off at any time."
             )
         except Exception as error:
             return self._handle_tool_error("configuring Codex session settings", error)
