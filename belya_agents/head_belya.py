@@ -491,6 +491,7 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
                 "Any new session should have a different id than previous sessions. "
                 "review the prompt with the user before sending it to the 'send_task_to_Codex' function. "
                 "Always use the `send_task_to_Codex` tool to send any coding task to Codex CLI. "
+                "Let the user know that Codex can optionally use a web search feature to help with tasks; confirm whether they want it enabled before toggling it on. Use the Codex session configuration tool to update this setting. "
                 "Make sure you notify the user of the current branch before they start a new session/task. use the 'check_current_branch' to get the current branch. "
                 "Ask the user if he wants to create a new branch and if the user approve, start a new branch in the repo before sending new tasks to Codex CLI. "
                 "Do not change the branch mid-session. "
@@ -1074,6 +1075,8 @@ class HeadBelyaAgent(AgentUtilitiesMixin, SessionManagementToolsMixin, Agent):
             update_kwargs["approval_policy"] = settings.get("approval_policy")
         if "model" in settings:
             update_kwargs["model"] = settings.get("model")
+        if "web_search_enabled" in settings:
+            update_kwargs["web_search_enabled"] = settings.get("web_search_enabled")
         if not update_kwargs:
             return
         try:
